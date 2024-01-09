@@ -4,12 +4,15 @@ import org.modelmapper.ModelMapper;
 import org.prkguides.blog.dto.PostDto;
 import org.prkguides.blog.entity.Post;
 import org.prkguides.blog.exceptions.ResourceNotFoundException;
+import org.prkguides.blog.miscellaneous.PaginationResponse;
 import org.prkguides.blog.repository.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class PostServiceImpl implements PostService {
@@ -37,12 +40,30 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public List<PostDto> getAllPosts() {
+    public PaginationResponse getAllPosts(int pageNo, int pageSize) {
 
-        List<Post> posts = postRepository.findAll();
+        //Create pageable instance
+        Pageable pageable = PageRequest.of(pageNo,pageSize);
 
-        return posts.stream().map((post) -> modelMapper.map(post,PostDto.class))
-                .collect(Collectors.toList());
+        Page<Post> page = postRepository.findAll(pageable);
+
+//        List<Post> posts = postRepository.findAll();
+        //get content from page
+        List<Post> posts = page.getContent();
+
+        List<PostDto> content = posts.stream().map((post) -> modelMapper.map(post,PostDto.class))
+                .toList();
+
+        PaginationResponse response = new PaginationResponse();
+
+        response.setContent(content);
+        response.setPageNo(page.getNumber());
+        response.setPageSize(page.getSize());
+        response.setTotalPages(page.getTotalPages());
+        response.setTotalElements(page.getTotalElements());
+        response.setLast(page.isLast());
+
+        return response;
     }
 
     @Override
@@ -63,6 +84,8 @@ public class PostServiceImpl implements PostService {
         post.setTitle(postDto.getTitle());
         post.setDescription(postDto.getDescription());
         post.setContent(postDto.getContent());
+
+        postRepository.save(post);
 
         return modelMapper.map(post,PostDto.class);
     }
