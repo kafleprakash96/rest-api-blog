@@ -1,13 +1,13 @@
 package org.prkguides.blog.service;
 
 import org.prkguides.blog.dto.PostDto;
-import java.util.List;
+import org.prkguides.blog.miscellaneous.PaginationResponse;
 
 public interface PostService {
 
     PostDto createPost(PostDto postDto);
 
-    List<PostDto> getAllPosts();
+    PaginationResponse getAllPosts(int pageNo, int pageSize);
 
     PostDto findPostById(Long id);
 

@@ -1,13 +1,11 @@
 package org.prkguides.blog.controller;
 
 import org.prkguides.blog.dto.PostDto;
+import org.prkguides.blog.miscellaneous.PaginationResponse;
 import org.prkguides.blog.service.PostService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 
 @RestController
@@ -15,8 +13,11 @@ import java.util.List;
 @CrossOrigin
 public class PostController {
 
-    @Autowired
-    private PostService postService;
+    PostService postService;
+
+    PostController(PostService postService){
+        this.postService = postService;
+    }
 
     @PostMapping
     public ResponseEntity<PostDto> createPost (@RequestBody PostDto postDto){
@@ -24,14 +25,16 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PostDto>> getAllPosts(){
+    public ResponseEntity<PaginationResponse> getAllPosts(@RequestParam(value = "pageNo", defaultValue = "0", required = false) int pageNo,
+                                                     @RequestParam(value = "pageSize",defaultValue = "10", required = false) int pageSize){
 
-        List<PostDto> postDtos = postService.getAllPosts();
+        PaginationResponse paginationResponse = postService.getAllPosts(pageNo,pageSize);
+//        List<PostDto> postDtos = postService.getAllPosts(pageNo,pageSize);
 
-        if(!postDtos.isEmpty()){
-            return new ResponseEntity<>(postDtos,HttpStatus.OK);
+        if(!paginationResponse.getContent().isEmpty()){
+            return new ResponseEntity<>(paginationResponse,HttpStatus.OK);
         }else {
-            return new ResponseEntity<>(postDtos,HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>(paginationResponse,HttpStatus.NO_CONTENT);
         }
     }
 
@@ -50,4 +53,6 @@ public class PostController {
         postService.deletePostById(id);
         return ResponseEntity.ok("Post with id " + id + " deleted successfully");
     }
+
+
 }
