@@ -20,6 +20,7 @@ public class PostServiceImpl implements PostService {
     @Autowired
     private ModelMapper modelMapper;
 
+    @Autowired
     private PostRepository postRepository;
 
     public PostServiceImpl(PostRepository postRepository){
@@ -33,10 +34,7 @@ public class PostServiceImpl implements PostService {
 
         Post newPost = postRepository.save(post);
 
-        //Convert entity to DTO
-        PostDto postResponse = modelMapper.map(newPost,PostDto.class);
-
-        return postResponse;
+        return modelMapper.map(newPost,PostDto.class);
     }
 
     @Override
