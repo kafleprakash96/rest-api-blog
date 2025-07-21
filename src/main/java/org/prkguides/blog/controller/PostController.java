@@ -1,5 +1,6 @@
 package org.prkguides.blog.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import org.prkguides.blog.dto.PostDto;
 import org.prkguides.blog.miscellaneous.PaginationResponse;
 import org.prkguides.blog.service.PostService;
@@ -19,6 +20,8 @@ public class PostController {
         this.postService = postService;
     }
 
+
+    @Operation(summary = "Create a post")
     @PostMapping
     public ResponseEntity<PostDto> createPost (@RequestBody PostDto postDto){
         return  new ResponseEntity<>(postService.createPost(postDto) , HttpStatus.CREATED);
