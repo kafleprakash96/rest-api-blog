@@ -1,12 +1,13 @@
 package org.prkguides.blog.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.prkguides.blog.enums.PostStatus;
 
 import java.time.LocalDateTime;
@@ -15,22 +16,16 @@ import java.util.Set;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Schema(description = "Post data transfer object")
-public class PostDto {
-
-    @Schema(description = "Post ID", example = "1")
-    private Long id;
+@Schema(description = "Post creation request")
+public class PostCreateDto {
 
     @NotBlank(message = "Title is required")
     @Size(min = 5, max = 200, message = "Title must be between 5 and 200 characters")
     @Schema(description = "Post title", example = "Getting Started with Spring Boot")
     private String title;
 
-    @Schema(description = "URL-friendly slug", example = "getting-started-with-spring-boot")
-    private String slug;
-
     @Size(max = 500, message = "Excerpt must not exceed 500 characters")
-    @Schema(description = "Post excerpt/summary", example = "Learn the basics of Spring Boot framework...")
+    @Schema(description = "Post excerpt/summary")
     private String excerpt;
 
     @NotBlank(message = "Content is required")
@@ -44,15 +39,11 @@ public class PostDto {
     @Schema(description = "Estimated reading time in minutes", example = "5")
     private Integer readingTimeMinutes;
 
-    @Schema(description = "Number of views", example = "1250")
-    private Long viewCount;
-
     @NotNull(message = "Status is required")
     @Schema(description = "Post status", example = "PUBLISHED")
     private PostStatus status;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    @Schema(description = "Publication date", example = "2024-01-15T10:30:00")
+    @Schema(description = "Publication date (for scheduled posts)")
     private LocalDateTime publishedDate;
 
     @Size(max = 160, message = "Meta description must not exceed 160 characters")
@@ -63,23 +54,13 @@ public class PostDto {
     @Schema(description = "SEO meta keywords")
     private String metaKeywords;
 
-    @Schema(description = "Post author information")
-    private UserSummaryDto author;
+    @Schema(description = "Tag names to associate with the post")
+    private Set<String> tagNames;
 
-    @Schema(description = "Post tags")
-    private Set<TagDto> tags;
-
-    @Schema(description = "Whether post is featured", example = "true")
-    private Boolean isFeatured;
+    @Schema(description = "Whether post is featured", example = "false")
+    private Boolean isFeatured = false;
 
     @Schema(description = "Whether comments are allowed", example = "true")
-    private Boolean allowComments;
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    @Schema(description = "Creation timestamp")
-    private LocalDateTime createdAt;
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    @Schema(description = "Last update timestamp")
-    private LocalDateTime updatedAt;
+    private Boolean allowComments = true;
 }
+
