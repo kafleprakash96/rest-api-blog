@@ -9,7 +9,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.prkguides.blog.dto.*;
-import org.prkguides.blog.miscellaneous.PaginationResponse;
 import org.prkguides.blog.service.PostService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,35 +49,16 @@ public class PostController {
                 .body(APIResponse.success("Post created successfully", createdPost));
     }
 
-    @GetMapping
-    public ResponseEntity<PaginationResponse> getAllPosts(@RequestParam(value = "pageNo", defaultValue = "0", required = false) int pageNo,
-                                                     @RequestParam(value = "pageSize",defaultValue = "10", required = false) int pageSize){
-
-        PaginationResponse paginationResponse = postService.getAllPosts(pageNo,pageSize);
-//        List<PostDto> postDtos = postService.getAllPosts(pageNo,pageSize);
-
-        if(!paginationResponse.getContent().isEmpty()){
-            return new ResponseEntity<>(paginationResponse,HttpStatus.OK);
-        }else {
-            return new ResponseEntity<>(paginationResponse,HttpStatus.NO_CONTENT);
-        }
+    @Operation(summary = "Get published posts", description = "Retrieves only published posts with pagination")
+    @GetMapping("/published")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getPublishedPosts(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize
+    ) {
+        PaginationResponse<PostSummaryDto> posts = postService.getPublishedPosts(pageNo,pageSize);
+        return ResponseEntity.ok(APIResponse.success("Published posts retrieved successfully", posts));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PostDto> findPostById(@PathVariable Long id){
-        return new ResponseEntity<>(postService.findPostById(id),HttpStatus.OK);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<PostDto> updatePostById(@PathVariable Long id, @RequestBody PostDto postDto){
-        return new ResponseEntity<>(postService.updatePostById(id,postDto),HttpStatus.OK);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deletePostById(@PathVariable Long id){
-        postService.deletePostById(id);
-        return ResponseEntity.ok("Post with id " + id + " deleted successfully");
-    }
 
 
 }

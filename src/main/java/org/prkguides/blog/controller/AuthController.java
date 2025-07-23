@@ -33,4 +33,11 @@ public class AuthController {
         return ResponseEntity.ok(APIResponse.success("User authenticated successfully", jwtResponse));
 
     }
+
+    @Operation(summary = "Token Validation", description = "JWT token validation")
+    @PostMapping("/validate")
+    public ResponseEntity<APIResponse<Boolean>> validateToken(@RequestParam String token){
+        boolean isValid = authService.validateToken(token);
+        return ResponseEntity.ok(APIResponse.success("Token Validation completed",isValid));
+    }
 }

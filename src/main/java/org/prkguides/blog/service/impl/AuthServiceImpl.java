@@ -52,4 +52,9 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid username or password");
         }
     }
+
+    @Override
+    public boolean validateToken(String token) {
+        return tokenProvider.validateToken(token);
+    }
 }

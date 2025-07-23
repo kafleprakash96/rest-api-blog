@@ -18,7 +18,7 @@ public class JwtTokenProvider {
     @Value("${spring.security.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${sprint.security.jwt.expiration}")
+    @Value("${spring.security.jwt.expiration}")
     private long jwtExpirationInMs;
 
     private SecretKey getSigningKey() {
