@@ -21,14 +21,15 @@ public interface PostRepository extends JpaRepository<Post,Long>, JpaSpecificati
     Page<Post> findByStatusOrderByPublishedDateDesc(PostStatus status, Pageable pageable);
 
     // Find featured posts
-//    Page<Post> findByIsFeaturedTrueAndStatusOrderByPublishedDateDesc(PostStatus status, Pageable pageable);
-//
+    Page<Post> findByIsFeaturedTrueAndStatusOrderByPublishedDateDesc(PostStatus status, Pageable pageable);
+
 //    // Find posts by author
-//    Page<Post> findByAuthorUsernameAndStatusOrderByPublishedDateDesc(String username, PostStatus status, Pageable pageable);
-//
+    Page<Post> findByAuthorUsernameAndStatusOrderByPublishedDateDesc(String username, PostStatus status, Pageable pageable);
+
 //    // Find posts by tag
 //    @Query("SELECT p FROM Post p JOIN p.tags t WHERE t.name = :tagName AND p.status = :status ORDER BY p.publishedDate DESC")
 //    Page<Post> findByTagNameAndStatus(@Param("tagName") String tagName, @Param("status") PostStatus status, Pageable pageable);
+
 //
 //    // Full-text search
 //    @Query("SELECT p FROM Post p WHERE p.status = :status AND " +
