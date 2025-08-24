@@ -8,7 +8,7 @@ echo "🚀 Setting up blog data..."
 echo "📝 Logging in..."
 LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/signin" \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}')
+  -d '{"username": "admin", "password": "prakash12"}')
 
 JWT_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
 
