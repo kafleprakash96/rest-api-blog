@@ -1,22 +1,28 @@
 package org.prkguides.blog.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.prkguides.blog.enums.Role;
 
+import java.time.LocalDateTime;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Schema(description = "User summary information")
-public class UserSummaryDto {
+@Schema(description = "Complete user information")
+public class UserDto {
 
     @Schema(description = "User ID", example = "1")
     private Long id;
 
     @Schema(description = "Username", example = "johndoe")
     private String username;
+
+    @Schema(description = "Email address", example = "john@example.com")
+    private String email;
 
     @Schema(description = "First name", example = "John")
     private String firstName;
@@ -36,6 +42,20 @@ public class UserSummaryDto {
     @Schema(description = "Website URL")
     private String websiteUrl;
 
-    @Schema(description = "User role", example = "ADMIN")
+    @Schema(description = "User role", example = "USER")
     private Role role;
+
+    @Schema(description = "Whether user is active", example = "true")
+    private Boolean isActive;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Creation timestamp")
+    private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Last update timestamp")
+    private LocalDateTime updatedAt;
+
+    @Schema(description = "Number of published posts", example = "5")
+    private Long postCount;
 }

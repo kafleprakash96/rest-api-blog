@@ -38,14 +38,14 @@ public class AuthServiceImpl implements AuthService {
 
             User user = userRepository.findByUsername(loginRequest.getUsername()).orElseThrow(()-> new ResourceNotFoundException("User", "username", loginRequest.getUsername()));
 
-            UserSummaryDto userDto = modelMapper.map(user, UserSummaryDto.class);
+            UserSummaryDto userSummaryDto = modelMapper.map(user, UserSummaryDto.class);
 
             log.info("User {} authenticated successfully", loginRequest.getUsername());
 
             return JwtResponseDto.builder()
                     .token(jwt)
                     .type("Bearer")
-                    .user(userDto)
+                    .user(userSummaryDto)
                     .build();
         } catch (AuthenticationException e) {
             log.error("Authentication failed for user: {}", loginRequest.getUsername());

@@ -1,32 +1,31 @@
 package org.prkguides.blog.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.prkguides.blog.enums.Role;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Schema(description = "User summary information")
-public class UserSummaryDto {
+@Schema(description = "User profile update request")
+public class UserUpdateDto {
 
-    @Schema(description = "User ID", example = "1")
-    private Long id;
+    @Email(message = "Email should be valid")
+    @Schema(description = "Email address", example = "john@example.com")
+    private String email;
 
-    @Schema(description = "Username", example = "johndoe")
-    private String username;
-
+    @Size(max = 50, message = "First name must not exceed 50 characters")
     @Schema(description = "First name", example = "John")
     private String firstName;
 
+    @Size(max = 50, message = "Last name must not exceed 50 characters")
     @Schema(description = "Last name", example = "Doe")
     private String lastName;
 
-    @Schema(description = "Full name", example = "John Doe")
-    private String fullName;
-
+    @Size(max = 1000, message = "Bio must not exceed 1000 characters")
     @Schema(description = "User bio")
     private String bio;
 
@@ -35,7 +34,5 @@ public class UserSummaryDto {
 
     @Schema(description = "Website URL")
     private String websiteUrl;
-
-    @Schema(description = "User role", example = "ADMIN")
-    private Role role;
 }
+

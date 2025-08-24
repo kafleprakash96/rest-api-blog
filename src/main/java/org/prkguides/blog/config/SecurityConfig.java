@@ -44,6 +44,11 @@ public class SecurityConfig {
                         // Authentication endpoints - MUST be first and completely public
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
+                        // User registration - public
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/{username}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/authors").permitAll()
+
                         // Public read-only endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts/published/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts/featured/**").permitAll()
@@ -51,9 +56,26 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts/recent/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts/slug/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts/tag/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/posts/author/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/posts/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts/*/related").permitAll()
+
+                        // Tags - public read access
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
+
+                        // Search endpoints - public
+                        .requestMatchers(HttpMethod.GET, "/api/v1/search/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/search/**").permitAll()
+
+                        // Analytics - public tracking endpoint
+                        .requestMatchers(HttpMethod.POST, "/api/v1/analytics/track-view").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/analytics/popular").permitAll()
+
+                        // Comments - public read access for approved comments
+                        .requestMatchers(HttpMethod.GET, "/api/v1/comments/post/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/comments/*/replies").permitAll()
+
+                        // File access - public read access for images
                         .requestMatchers(HttpMethod.GET, "/api/v1/files/images/**").permitAll()
 
                         // Documentation and monitoring
@@ -69,8 +91,31 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/posts/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/posts").hasRole("ADMIN") // All posts (admin view)
+
+                        // Tag management - admin only
+                        .requestMatchers(HttpMethod.POST, "/api/v1/tags/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/tags/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/tags/**").hasRole("ADMIN")
+
+                        // User management - admin only (except profile operations)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/users/**").hasRole("ADMIN")
+
+                        // File upload - admin only
+                        .requestMatchers("/api/v1/files/upload/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/files/**").hasRole("ADMIN")
+
+                        // Admin panel
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/files/upload").hasRole("ADMIN")
+
+                        // Analytics (except public endpoints) - admin only
+                        .requestMatchers("/api/v1/analytics/**").hasRole("ADMIN")
+
+                        // Comment moderation - admin only
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/comments/*/approve").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/comments/*/reject").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/comments/pending").hasRole("ADMIN")
 
                         // All other requests require authentication
                         .anyRequest().authenticated()
