@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.prkguides.blog.enums.Role;
 
 @Data
 @AllArgsConstructor
@@ -34,4 +35,9 @@ public class UserSummaryDto {
 
     @Schema(description = "Website URL")
     private String websiteUrl;
+
+    @Schema(description = "User role", example = "ADMIN")
+    private Role role;
+
+
 }

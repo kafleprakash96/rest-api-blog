@@ -23,7 +23,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/posts")
-@CrossOrigin(origins = {"http://localhost:4200", "https://yourdomain.com"})
+@CrossOrigin(origins = {"http://localhost:4200"})
 @RequiredArgsConstructor
 @Tag(name = "Posts", description = "Blog post management endpoints")
 public class PostController {

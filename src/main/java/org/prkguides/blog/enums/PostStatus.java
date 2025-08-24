@@ -1,5 +1,8 @@
 package org.prkguides.blog.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum PostStatus {
     DRAFT("Draft"),
     PUBLISHED("Published"),
@@ -12,7 +15,4 @@ public enum PostStatus {
         this.displayName = displayName;
     }
 
-    public String getDisplayName() {
-        return displayName;
-    }
 }

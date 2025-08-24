@@ -17,10 +17,10 @@ public class PaginationResponse<T> {
     private List<T> content;
 
     @Schema(description = "Current page number (0-based)", example = "0")
-    private Integer pageNo;
+    private Integer page;
 
     @Schema(description = "Page size", example = "10")
-    private Integer pageSize;
+    private Integer size;
 
     @Schema(description = "Total number of elements", example = "150")
     private Long totalElements;

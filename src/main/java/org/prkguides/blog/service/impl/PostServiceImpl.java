@@ -182,14 +182,6 @@ public class PostServiceImpl implements PostService {
         return null;
     }
 
-
-//    @Override
-//    public PaginationResponse<PostSummaryDto> getPostsByTag(String tagName, int pageNo, int pageSize) {
-//        Pageable pageable = PageRequest.of(pageNo, pageSize);
-//        Page<Post> postsPage = postRepository.findByTagNameAndStatus(tagName, PostStatus.PUBLISHED, pageable);
-//        return mapToSummaryPaginationResponse(postsPage);
-//    }
-
     @Override
     public PaginationResponse<PostSummaryDto> searchPosts(SearchRequestDto searchRequest) {
         Pageable pageable = createPageable(searchRequest);
@@ -354,8 +346,8 @@ public class PostServiceImpl implements PostService {
 
         PaginationResponse<PostSummaryDto> response = new PaginationResponse<>();
         response.setContent(content);
-        response.setPageNo(postsPage.getNumber());
-        response.setPageSize(postsPage.getSize());
+        response.setPage(postsPage.getNumber());
+        response.setSize(postsPage.getSize());
         response.setTotalPages(postsPage.getTotalPages());
         response.setTotalElements(postsPage.getTotalElements());
         response.setLast(postsPage.isLast());
