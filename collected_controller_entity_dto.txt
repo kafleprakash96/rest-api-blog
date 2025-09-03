@@ -1,0 +1,2254 @@
+===============================
+ PACKAGE: controller
+===============================
+
+----- FILE: AnalyticsController.java -----
+package org.prkguides.blog.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.prkguides.blog.dto.APIResponse;
+import org.prkguides.blog.service.AnalyticsService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/analytics")
+@CrossOrigin(origins = {"http://localhost:4200"})
+@RequiredArgsConstructor
+@Tag(name = "Analytics", description = "Analytics and reporting endpoints")
+public class AnalyticsController {
+
+    private final AnalyticsService analyticsService;
+
+    @Operation(summary = "Get post analytics", description = "Get analytics data for a specific post")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/posts/{postId}")
+    public ResponseEntity<APIResponse<Map<String, Object>>> getPostAnalytics(
+            @Parameter(description = "Post ID") @PathVariable Long postId,
+            @RequestParam(value = "days", defaultValue = "30") int days) {
+
+        Map<String, Object> analytics = analyticsService.getPostAnalytics(postId, days);
+        return ResponseEntity.ok(APIResponse.success("Post analytics retrieved successfully", analytics));
+    }
+
+    @Operation(summary = "Get traffic analytics", description = "Get overall traffic analytics")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/traffic")
+    public ResponseEntity<APIResponse<Map<String, Object>>> getTrafficAnalytics(
+            @RequestParam(value = "days", defaultValue = "30") int days) {
+
+        Map<String, Object> analytics = analyticsService.getTrafficAnalytics(days);
+        return ResponseEntity.ok(APIResponse.success("Traffic analytics retrieved successfully", analytics));
+    }
+
+    @Operation(summary = "Get user engagement analytics", description = "Get user engagement metrics")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/engagement")
+    public ResponseEntity<APIResponse<Map<String, Object>>> getEngagementAnalytics(
+            @RequestParam(value = "days", defaultValue = "30") int days) {
+
+        Map<String, Object> analytics = analyticsService.getEngagementAnalytics(days);
+        return ResponseEntity.ok(APIResponse.success("Engagement analytics retrieved successfully", analytics));
+    }
+
+    @Operation(summary = "Get content performance", description = "Get content performance metrics")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/content-performance")
+    public ResponseEntity<APIResponse<Map<String, Object>>> getContentPerformance(
+            @RequestParam(value = "days", defaultValue = "30") int days) {
+
+        Map<String, Object> analytics = analyticsService.getContentPerformance(days);
+        return ResponseEntity.ok(APIResponse.success("Content performance retrieved successfully", analytics));
+    }
+
+    @Operation(summary = "Get tag analytics", description = "Get tag usage and performance analytics")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/tags")
+    public ResponseEntity<APIResponse<Map<String, Object>>> getTagAnalytics() {
+
+        Map<String, Object> analytics = analyticsService.getTagAnalytics();
+        return ResponseEntity.ok(APIResponse.success("Tag analytics retrieved successfully", analytics));
+    }
+
+    @Operation(summary = "Track page view", description = "Track a page view (public endpoint)")
+    @PostMapping("/track-view")
+    public ResponseEntity<APIResponse<String>> trackPageView(
+            @RequestParam String page,
+            @RequestParam(required = false) String referrer,
+            @RequestParam(required = false) String userAgent) {
+
+        analyticsService.trackPageView(page, referrer, userAgent);
+        return ResponseEntity.ok(APIResponse.success("Page view tracked", "View recorded"));
+    }
+
+    @Operation(summary = "Get popular content", description = "Get most popular content")
+    @GetMapping("/popular")
+    public ResponseEntity<APIResponse<Map<String, Object>>> getPopularContent(
+            @RequestParam(value = "period", defaultValue = "week") String period,
+            @RequestParam(value = "limit", defaultValue = "10") int limit) {
+
+        Map<String, Object> popular = analyticsService.getPopularContent(period, limit);
+        return ResponseEntity.ok(APIResponse.success("Popular content retrieved successfully", popular));
+    }
+}
+
+
+----- FILE: TagController.java -----
+package org.prkguides.blog.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.prkguides.blog.dto.*;
+import org.prkguides.blog.service.TagService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/tags")
+@CrossOrigin(origins = {"http://localhost:4200"})
+@RequiredArgsConstructor
+@Tag(name = "Tags", description = "Tag management endpoints")
+public class TagController {
+
+    private final TagService tagService;
+
+    @Operation(summary = "Create a new tag", description = "Creates a new tag. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping
+    public ResponseEntity<APIResponse<TagDto>> createTag(
+            @Valid @RequestBody TagCreateDto tagCreateDto) {
+
+        log.info("Creating new tag: {}", tagCreateDto.getName());
+        TagDto createdTag = tagService.createTag(tagCreateDto);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(APIResponse.success("Tag created successfully", createdTag));
+    }
+
+    @Operation(summary = "Get all tags", description = "Retrieves all tags with optional pagination")
+    @GetMapping
+    public ResponseEntity<APIResponse<PaginationResponse<TagDto>>> getAllTags(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "50") int pageSize) {
+
+        PaginationResponse<TagDto> tags = tagService.getAllTags(pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Tags retrieved successfully", tags));
+    }
+
+    @Operation(summary = "Get popular tags", description = "Retrieves popular tags based on post count")
+    @GetMapping("/popular")
+    public ResponseEntity<APIResponse<List<TagDto>>> getPopularTags(
+            @RequestParam(value = "limit", defaultValue = "20") int limit) {
+
+        List<TagDto> popularTags = tagService.getPopularTags(limit);
+        return ResponseEntity.ok(APIResponse.success("Popular tags retrieved successfully", popularTags));
+    }
+
+    @Operation(summary = "Get tag by ID", description = "Retrieves a specific tag by its ID")
+    @GetMapping("/{id}")
+    public ResponseEntity<APIResponse<TagDto>> getTagById(
+            @Parameter(description = "Tag ID") @PathVariable Long id) {
+
+        TagDto tag = tagService.getTagById(id);
+        return ResponseEntity.ok(APIResponse.success("Tag retrieved successfully", tag));
+    }
+
+    @Operation(summary = "Get tag by slug", description = "Retrieves a specific tag by its slug")
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<APIResponse<TagDto>> getTagBySlug(
+            @Parameter(description = "Tag slug") @PathVariable String slug) {
+
+        TagDto tag = tagService.getTagBySlug(slug);
+        return ResponseEntity.ok(APIResponse.success("Tag retrieved successfully", tag));
+    }
+
+    @Operation(summary = "Update tag", description = "Updates an existing tag. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<APIResponse<TagDto>> updateTag(
+            @PathVariable Long id,
+            @Valid @RequestBody TagCreateDto tagUpdateDto) {
+
+        log.info("Updating tag with ID: {}", id);
+        TagDto updatedTag = tagService.updateTag(id, tagUpdateDto);
+
+        return ResponseEntity.ok(APIResponse.success("Tag updated successfully", updatedTag));
+    }
+
+    @Operation(summary = "Delete tag", description = "Deletes a tag. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<APIResponse<String>> deleteTag(@PathVariable Long id) {
+
+        log.info("Deleting tag with ID: {}", id);
+        tagService.deleteTag(id);
+
+        return ResponseEntity.ok(APIResponse.success("Tag deleted successfully",
+                "Tag with ID " + id + " has been deleted"));
+    }
+
+    @Operation(summary = "Search tags", description = "Search tags by name")
+    @GetMapping("/search")
+    public ResponseEntity<APIResponse<List<TagDto>>> searchTags(
+            @RequestParam String query) {
+
+        List<TagDto> tags = tagService.searchTags(query);
+        return ResponseEntity.ok(APIResponse.success("Tag search completed successfully", tags));
+    }
+
+    @Operation(summary = "Get posts by tag", description = "Get all posts associated with a specific tag")
+    @GetMapping("/{id}/posts")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getPostsByTag(
+            @PathVariable Long id,
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+
+        PaginationResponse<PostSummaryDto> posts = tagService.getPostsByTag(id, pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Posts by tag retrieved successfully", posts));
+    }
+}
+
+
+----- FILE: CommentController.java -----
+package org.prkguides.blog.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.prkguides.blog.dto.*;
+import org.prkguides.blog.service.CommentService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/comments")
+@CrossOrigin(origins = {"http://localhost:4200"})
+@RequiredArgsConstructor
+@Tag(name = "Comments", description = "Comment management endpoints")
+public class CommentController {
+
+    private final CommentService commentService;
+
+    @Operation(summary = "Create comment", description = "Create a new comment on a post")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping
+    public ResponseEntity<APIResponse<CommentDto>> createComment(
+            @Valid @RequestBody CommentCreateDto commentCreateDto,
+            Authentication authentication) {
+
+        log.info("Creating comment on post ID: {} by user: {}",
+                commentCreateDto.getPostId(), authentication.getName());
+
+        CommentDto createdComment = commentService.createComment(commentCreateDto, authentication.getName());
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(APIResponse.success("Comment created successfully", createdComment));
+    }
+
+    @Operation(summary = "Get comments for post", description = "Get all comments for a specific post")
+    @GetMapping("/post/{postId}")
+    public ResponseEntity<APIResponse<PaginationResponse<CommentDto>>> getCommentsByPost(
+            @Parameter(description = "Post ID") @PathVariable Long postId,
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
+
+        PaginationResponse<CommentDto> comments = commentService.getCommentsByPost(postId, pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Comments retrieved successfully", comments));
+    }
+
+    @Operation(summary = "Get comment by ID", description = "Get a specific comment by its ID")
+    @GetMapping("/{id}")
+    public ResponseEntity<APIResponse<CommentDto>> getCommentById(
+            @Parameter(description = "Comment ID") @PathVariable Long id) {
+
+        CommentDto comment = commentService.getCommentById(id);
+        return ResponseEntity.ok(APIResponse.success("Comment retrieved successfully", comment));
+    }
+
+    @Operation(summary = "Update comment", description = "Update a comment (only by comment author or admin)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PutMapping("/{id}")
+    public ResponseEntity<APIResponse<CommentDto>> updateComment(
+            @PathVariable Long id,
+            @Valid @RequestBody CommentUpdateDto commentUpdateDto,
+            Authentication authentication) {
+
+        log.info("Updating comment ID: {} by user: {}", id, authentication.getName());
+        CommentDto updatedComment = commentService.updateComment(id, commentUpdateDto, authentication.getName());
+
+        return ResponseEntity.ok(APIResponse.success("Comment updated successfully", updatedComment));
+    }
+
+    @Operation(summary = "Delete comment", description = "Delete a comment (only by comment author or admin)")
+    @SecurityRequirement(name = "bearerAuth")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<APIResponse<String>> deleteComment(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        log.info("Deleting comment ID: {} by user: {}", id, authentication.getName());
+        commentService.deleteComment(id, authentication.getName());
+
+        return ResponseEntity.ok(APIResponse.success("Comment deleted successfully",
+                "Comment with ID " + id + " has been deleted"));
+    }
+
+    @Operation(summary = "Reply to comment", description = "Reply to an existing comment")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/{id}/reply")
+    public ResponseEntity<APIResponse<CommentDto>> replyToComment(
+            @PathVariable Long id,
+            @Valid @RequestBody CommentReplyDto replyDto,
+            Authentication authentication) {
+
+        log.info("Creating reply to comment ID: {} by user: {}", id, authentication.getName());
+        CommentDto reply = commentService.replyToComment(id, replyDto, authentication.getName());
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(APIResponse.success("Reply created successfully", reply));
+    }
+
+    @Operation(summary = "Get comment replies", description = "Get all replies to a specific comment")
+    @GetMapping("/{id}/replies")
+    public ResponseEntity<APIResponse<List<CommentDto>>> getCommentReplies(
+            @Parameter(description = "Comment ID") @PathVariable Long id) {
+
+        List<CommentDto> replies = commentService.getCommentReplies(id);
+        return ResponseEntity.ok(APIResponse.success("Replies retrieved successfully", replies));
+    }
+
+    @Operation(summary = "Approve comment", description = "Approve a pending comment (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/approve")
+    public ResponseEntity<APIResponse<CommentDto>> approveComment(@PathVariable Long id) {
+
+        log.info("Approving comment ID: {}", id);
+        CommentDto approvedComment = commentService.approveComment(id);
+
+        return ResponseEntity.ok(APIResponse.success("Comment approved successfully", approvedComment));
+    }
+
+    @Operation(summary = "Reject comment", description = "Reject a pending comment (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/reject")
+    public ResponseEntity<APIResponse<CommentDto>> rejectComment(@PathVariable Long id) {
+
+        log.info("Rejecting comment ID: {}", id);
+        CommentDto rejectedComment = commentService.rejectComment(id);
+
+        return ResponseEntity.ok(APIResponse.success("Comment rejected successfully", rejectedComment));
+    }
+
+    @Operation(summary = "Get pending comments", description = "Get all pending comments for moderation (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/pending")
+    public ResponseEntity<APIResponse<PaginationResponse<CommentDto>>> getPendingComments(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
+
+        PaginationResponse<CommentDto> comments = commentService.getPendingComments(pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Pending comments retrieved successfully", comments));
+    }
+
+    @Operation(summary = "Get user comments", description = "Get all comments by authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/my-comments")
+    public ResponseEntity<APIResponse<PaginationResponse<CommentDto>>> getUserComments(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize,
+            Authentication authentication) {
+
+        PaginationResponse<CommentDto> comments = commentService.getCommentsByUser(authentication.getName(), pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("User comments retrieved successfully", comments));
+    }
+}
+
+
+----- FILE: AuthController.java -----
+package org.prkguides.blog.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.prkguides.blog.dto.APIResponse;
+import org.prkguides.blog.dto.JwtResponseDto;
+import org.prkguides.blog.dto.LoginRequestDto;
+import org.prkguides.blog.service.AuthService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/auth")
+@CrossOrigin(origins = {"http://localhost:4200", "https://yourdomain.com"})
+@RequiredArgsConstructor
+@Tag(name = "Authentication", description = "Authentication management endpoints")
+public class AuthController {
+
+    private final AuthService authService;
+
+    @Operation(summary = "User login", description = "Authenticate user and return JWT token")
+    @PostMapping("/signin")
+    public ResponseEntity<APIResponse<JwtResponseDto>> authenticateUser(@Valid @RequestBody LoginRequestDto loginRequest){
+
+        log.info("Login attempt for username: {}", loginRequest.getUsername());
+
+        JwtResponseDto jwtResponse = authService.authenticateUser(loginRequest);
+
+        return ResponseEntity.ok(APIResponse.success("User authenticated successfully", jwtResponse));
+
+    }
+
+    @Operation(summary = "Token Validation", description = "JWT token validation")
+    @PostMapping("/validate")
+    public ResponseEntity<APIResponse<Boolean>> validateToken(@RequestParam String token){
+        boolean isValid = authService.validateToken(token);
+        return ResponseEntity.ok(APIResponse.success("Token Validation completed",isValid));
+    }
+}
+
+
+----- FILE: FileController.java -----
+package org.prkguides.blog.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.prkguides.blog.dto.APIResponse;
+import org.prkguides.blog.dto.FileUploadResponseDto;
+import org.prkguides.blog.service.FileService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/files")
+@CrossOrigin(origins = {"http://localhost:4200"})
+@RequiredArgsConstructor
+@Tag(name = "Files", description = "File management endpoints")
+public class FileController {
+
+    private final FileService fileService;
+
+    @Operation(summary = "Upload image", description = "Upload an image file. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/upload")
+    public ResponseEntity<APIResponse<FileUploadResponseDto>> uploadImage(
+            @Parameter(description = "Image file to upload")
+            @RequestParam("file") MultipartFile file) {
+
+        log.info("File upload attempt: {}", file.getOriginalFilename());
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(APIResponse.error("File is empty"));
+        }
+
+        FileUploadResponseDto uploadResponse = fileService.uploadImage(file);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(APIResponse.success("File uploaded successfully", uploadResponse));
+    }
+
+    @Operation(summary = "Upload multiple images", description = "Upload multiple image files. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/upload/multiple")
+    public ResponseEntity<APIResponse<List<FileUploadResponseDto>>> uploadMultipleImages(
+            @Parameter(description = "Image files to upload")
+            @RequestParam("files") MultipartFile[] files) {
+
+        log.info("Multiple file upload attempt: {} files", files.length);
+
+        List<FileUploadResponseDto> uploadResponses = fileService.uploadMultipleImages(files);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(APIResponse.success("Files uploaded successfully", uploadResponses));
+    }
+
+    @Operation(summary = "Get image", description = "Retrieve an uploaded image")
+    @GetMapping("/images/{filename:.+}")
+    public ResponseEntity<Resource> getImage(
+            @Parameter(description = "Image filename")
+            @PathVariable String filename) {
+
+        try {
+            Resource resource = fileService.getImage(filename);
+
+            if (resource.exists() && resource.isReadable()) {
+                String contentType = fileService.getContentType(filename);
+
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            log.error("Error retrieving image: {}", filename, e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @Operation(summary = "Delete image", description = "Delete an uploaded image. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/images/{filename:.+}")
+    public ResponseEntity<APIResponse<String>> deleteImage(
+            @Parameter(description = "Image filename")
+            @PathVariable String filename) {
+
+        log.info("Delete image attempt: {}", filename);
+
+        boolean deleted = fileService.deleteImage(filename);
+
+        if (deleted) {
+            return ResponseEntity.ok(APIResponse.success("Image deleted successfully", filename));
+        } else {
+            return ResponseEntity.notFound()
+                    .build();
+        }
+    }
+
+    @Operation(summary = "Get all uploaded images", description = "Get list of all uploaded images. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/images")
+    public ResponseEntity<APIResponse<List<FileUploadResponseDto>>> getAllImages() {
+
+        List<FileUploadResponseDto> images = fileService.getAllImages();
+        return ResponseEntity.ok(APIResponse.success("Images retrieved successfully", images));
+    }
+}
+
+
+----- FILE: PostController.java -----
+package org.prkguides.blog.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.prkguides.blog.dto.*;
+import org.prkguides.blog.service.PostService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/posts")
+@CrossOrigin(origins = {"http://localhost:4200"})
+@RequiredArgsConstructor
+@Tag(name = "Posts", description = "Blog post management endpoints")
+public class PostController {
+
+    private final PostService postService;
+
+
+    @Operation(summary = "Create a new blog post", description = "Creates a new blog post. Requires admin privileges.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Post created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/create")
+    public ResponseEntity<APIResponse<PostDto>> createPost(
+            @Valid @RequestBody PostCreateDto postCreateDto,
+            Authentication authentication) {
+
+        log.info("Creating new post: {} by user: {}", postCreateDto.getTitle(), authentication.getName());
+        PostDto createdPost = postService.createPost(postCreateDto, authentication.getName());
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(APIResponse.success("Post created successfully", createdPost));
+    }
+
+    @Operation(summary = "Get all posts with pagination", description = "Retrieves all posts with pagination support")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getAllPosts(
+            @Parameter(description = "Page number (0-based)")
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @Parameter(description = "Page size")
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.getAllPosts(pageNo, pageSize);
+
+        if (posts.getContent().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                    .body(APIResponse.success("No posts found", posts));
+        }
+
+        return ResponseEntity.ok(APIResponse.success("Posts retrieved successfully", posts));
+    }
+
+    @Operation(summary = "Get my posts", description = "Get posts created by the authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/my-posts")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getMyPosts(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            Authentication authentication) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.getPostsByAuthor(authentication.getName(), pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("My posts retrieved successfully", posts));
+    }
+
+    @Operation(summary = "Get published posts", description = "Retrieves only published posts with pagination")
+    @GetMapping("/published")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getPublishedPosts(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.getPublishedPosts(pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Published posts retrieved successfully", posts));
+    }
+
+    @Operation(summary = "Get featured posts", description = "Retrieves featured posts")
+    @GetMapping("/featured")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getFeaturedPosts(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "6") int pageSize) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.getFeaturedPosts(pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Featured posts retrieved successfully", posts));
+    }
+
+    @Operation(summary = "Get post by ID", description = "Retrieves a specific post by its ID")
+    @GetMapping("/{id}")
+    public ResponseEntity<APIResponse<PostDto>> getPostById(
+            @Parameter(description = "Post ID") @PathVariable Long id) {
+
+        PostDto post = postService.getPostById(id);
+
+        // Increment view count for published posts
+        if (post.getStatus().name().equals("PUBLISHED")) {
+            postService.incrementViewCount(id);
+        }
+
+        return ResponseEntity.ok(APIResponse.success("Post retrieved successfully", post));
+    }
+
+    @Operation(summary = "Get post by slug", description = "Retrieves a specific post by its URL slug")
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<APIResponse<PostDto>> getPostBySlug(
+            @Parameter(description = "Post slug") @PathVariable String slug) {
+
+        PostDto post = postService.getPostBySlug(slug);
+
+        // Increment view count for published posts
+        if (post.getStatus().name().equals("PUBLISHED")) {
+            postService.incrementViewCount(post.getId());
+        }
+
+        return ResponseEntity.ok(APIResponse.success("Post retrieved successfully", post));
+    }
+
+    @Operation(summary = "Update a blog post", description = "Updates an existing blog post. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<APIResponse<PostDto>> updatePost(
+            @PathVariable Long id,
+            @Valid @RequestBody PostCreateDto postUpdateDto) {
+
+        log.info("Updating post with ID: {}", id);
+        PostDto updatedPost = postService.updatePost(id, postUpdateDto);
+
+        return ResponseEntity.ok(APIResponse.success("Post updated successfully", updatedPost));
+    }
+
+    @Operation(summary = "Delete a blog post", description = "Deletes a blog post.Authors can delete their own posts, admins can delete any post.")
+    @SecurityRequirement(name = "bearerAuth")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<APIResponse<String>> deletePost(@PathVariable Long id) {
+
+        log.info("Deleting post with ID: {}", id);
+        postService.deletePost(id);
+
+        return ResponseEntity.ok(APIResponse.success("Post deleted successfully",
+                "Post with ID " + id + " has been deleted"));
+    }
+
+    @Operation(summary = "Search posts", description = "Search posts with various filters")
+    @PostMapping("/search")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> searchPosts(
+            @Valid @RequestBody SearchRequestDto searchRequest) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.searchPosts(searchRequest);
+        return ResponseEntity.ok(APIResponse.success("Search completed successfully", posts));
+    }
+
+    @Operation(summary = "Get posts by author", description = "Retrieves posts by a specific author")
+    @GetMapping("/author/{username}")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getPostsByAuthor(
+            @PathVariable String username,
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.getPostsByAuthor(username, pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Posts by author retrieved successfully", posts));
+    }
+
+    @Operation(summary = "Get posts by tag", description = "Retrieves posts with a specific tag")
+    @GetMapping("/tag/{tagName}")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getPostsByTag(
+            @PathVariable String tagName,
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.getPostsByTag(tagName, pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Posts by tag retrieved successfully", posts));
+    }
+
+    @Operation(summary = "Get related posts", description = "Retrieves posts related to a specific post")
+    @GetMapping("/{id}/related")
+    public ResponseEntity<APIResponse<List<PostSummaryDto>>> getRelatedPosts(
+            @PathVariable Long id,
+            @RequestParam(value = "limit", defaultValue = "5") int limit) {
+
+        List<PostSummaryDto> relatedPosts = postService.getRelatedPosts(id, limit);
+        return ResponseEntity.ok(APIResponse.success("Related posts retrieved successfully", relatedPosts));
+    }
+
+    @Operation(summary = "Get popular posts", description = "Retrieves most viewed posts")
+    @GetMapping("/popular")
+    public ResponseEntity<APIResponse<List<PostSummaryDto>>> getPopularPosts(
+            @RequestParam(value = "limit", defaultValue = "10") int limit) {
+
+        List<PostSummaryDto> popularPosts = postService.getPopularPosts(limit);
+        return ResponseEntity.ok(APIResponse.success("Popular posts retrieved successfully", popularPosts));
+    }
+
+    @Operation(summary = "Get recent posts", description = "Retrieves most recent posts")
+    @GetMapping("/recent")
+    public ResponseEntity<APIResponse<List<PostSummaryDto>>> getRecentPosts(
+            @RequestParam(value = "limit", defaultValue = "5") int limit) {
+
+        List<PostSummaryDto> recentPosts = postService.getRecentPosts(limit);
+        return ResponseEntity.ok(APIResponse.success("Recent posts retrieved successfully", recentPosts));
+    }
+
+    // Admin-only operations
+    @Operation(summary = "Publish a post", description = "Publishes a draft post. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/publish")
+    public ResponseEntity<APIResponse<PostDto>> publishPost(@PathVariable Long id) {
+
+        PostDto publishedPost = postService.publishPost(id);
+        return ResponseEntity.ok(APIResponse.success("Post published successfully", publishedPost));
+    }
+
+    @Operation(summary = "Unpublish a post", description = "Unpublishes a post. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/unpublish")
+    public ResponseEntity<APIResponse<PostDto>> unpublishPost(@PathVariable Long id) {
+
+        PostDto unpublishedPost = postService.unpublishPost(id);
+        return ResponseEntity.ok(APIResponse.success("Post unpublished successfully", unpublishedPost));
+    }
+
+    @Operation(summary = "Toggle featured status", description = "Toggles the featured status of a post. Requires admin privileges.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/toggle-featured")
+    public ResponseEntity<APIResponse<PostDto>> toggleFeatured(@PathVariable Long id) {
+
+        PostDto post = postService.toggleFeatured(id);
+        return ResponseEntity.ok(APIResponse.success("Featured status toggled successfully", post));
+    }
+}
+
+
+
+----- FILE: UserController.java -----
+package org.prkguides.blog.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.prkguides.blog.dto.*;
+import org.prkguides.blog.service.UserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/users")
+@CrossOrigin(origins = {"http://localhost:4200"})
+@RequiredArgsConstructor
+@Tag(name = "users", description = "User management endpoints")
+public class UserController {
+
+    private final UserService userService;
+
+    @Operation(summary = "Register new user", description = "Register new user account")
+    @PostMapping("/register")
+    public ResponseEntity<APIResponse<UserDto>> registerUser(
+            @Valid @RequestBody UserRegistrationDto registrationDto
+            ){
+        log.info("User registration attempt for username: {}", registrationDto.getUsername());
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                APIResponse.success(
+                        "User registered successfully", userService.registerUser(registrationDto)));
+    }
+
+    @Operation(summary = "Get current user profile", description = "Get the authenticated user's profile")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/profile")
+    public ResponseEntity<APIResponse<UserDto>> getCurrentUserProfile(Authentication authentication) {
+
+        UserDto user = userService.getCurrentUserProfile(authentication.getName());
+        return ResponseEntity.ok(APIResponse.success("Profile retrieved successfully", user));
+    }
+
+    @Operation(summary = "Update user profile", description = "Update the authenticated user's profile")
+    @SecurityRequirement(name = "bearerAuth")
+    @PutMapping("/profile")
+    public ResponseEntity<APIResponse<UserDto>> updateUserProfile(
+            @Valid @RequestBody UserUpdateDto userUpdateDto,
+            Authentication authentication) {
+
+        log.info("Profile update attempt for user: {}", authentication.getName());
+        UserDto updatedUser = userService.updateUserProfile(authentication.getName(), userUpdateDto);
+
+        return ResponseEntity.ok(APIResponse.success("Profile updated successfully", updatedUser));
+    }
+
+    @Operation(summary = "Change password", description = "Change the authenticated user's password")
+    @SecurityRequirement(name = "bearerAuth")
+    @PutMapping("/change-password")
+    public ResponseEntity<APIResponse<String>> changePassword(
+            @Valid @RequestBody PasswordChangeDto passwordChangeDto,
+            Authentication authentication) {
+
+        log.info("Password change attempt for user: {}", authentication.getName());
+        userService.changePassword(authentication.getName(), passwordChangeDto);
+
+        return ResponseEntity.ok(APIResponse.success("Password changed successfully", "Password updated"));
+    }
+
+    //Todo : Test with admin privileges
+    @Operation(summary = "Get user by username", description = "Get public user information by username")
+    @GetMapping("/{username}")
+    public ResponseEntity<APIResponse<UserSummaryDto>> getUserByUsername(
+            @Parameter(description = "Username") @PathVariable String username) {
+
+        UserSummaryDto user = userService.getUserByUsername(username);
+        return ResponseEntity.ok(APIResponse.success("User retrieved successfully", user));
+    }
+
+    @Operation(summary = "Get all users", description = "Get all users (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<APIResponse<PaginationResponse<UserSummaryDto>>> getAllUsers(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+
+        PaginationResponse<UserSummaryDto> users = userService.getAllUsers(pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("Users retrieved successfully", users));
+    }
+
+    @Operation(summary = "Update user role", description = "Update user role (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/role")
+    public ResponseEntity<APIResponse<UserDto>> updateUserRole(
+            @PathVariable Long id,
+            @RequestParam String role) {
+
+        log.info("Role update attempt for user ID: {} to role: {}", id, role);
+        UserDto updatedUser = userService.updateUserRole(id, role);
+
+        return ResponseEntity.ok(APIResponse.success("User role updated successfully", updatedUser));
+    }
+
+    @Operation(summary = "Toggle user active status", description = "Activate or deactivate user (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/toggle-active")
+    public ResponseEntity<APIResponse<UserDto>> toggleUserActive(@PathVariable Long id) {
+
+        log.info("Toggle active status for user ID: {}", id);
+        UserDto updatedUser = userService.toggleUserActive(id);
+
+        return ResponseEntity.ok(APIResponse.success("User status updated successfully", updatedUser));
+    }
+
+    @Operation(summary = "Delete user", description = "Delete user account (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<APIResponse<String>> deleteUser(@PathVariable Long id) {
+
+        log.info("Delete user attempt for ID: {}", id);
+        userService.deleteUser(id);
+
+        return ResponseEntity.ok(APIResponse.success("User deleted successfully",
+                "User with ID " + id + " has been deleted"));
+    }
+
+    @Operation(summary = "Get authors", description = "Get all users who have published posts")
+    @GetMapping("/authors")
+    public ResponseEntity<APIResponse<List<UserSummaryDto>>> getAuthors() {
+
+        List<UserSummaryDto> authors = userService.getAuthors();
+        return ResponseEntity.ok(APIResponse.success("Authors retrieved successfully", authors));
+    }
+}
+
+
+===============================
+ PACKAGE: entity
+===============================
+
+----- FILE: Post.java -----
+package org.prkguides.blog.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.prkguides.blog.enums.PostStatus;
+
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+@EqualsAndHashCode(callSuper = true)
+@Table(name = "posts",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"title"})},
+        indexes = {
+                @Index(name = "idx_post_status", columnList = "status"),
+                @Index(name = "idx_post_published_date", columnList = "publishedDate"),
+                @Index(name = "idx_post_author", columnList = "author_id")
+        })
+public class Post extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "title", nullable = false, length = 200)
+    private String title;
+
+    @Column(name = "slug", unique = true, nullable = false, length = 250)
+    private String slug;
+
+    @Column(name = "excerpt", length = 500)
+    private String excerpt;
+
+    @Lob
+    @Column(name = "content", columnDefinition = "LONGTEXT")
+    private String content;
+
+    @Column(name = "featured_image_url")
+    private String featuredImageUrl;
+
+    @Column(name = "reading_time")
+    private Integer readingTimeMinutes;
+
+    @Column(name = "view_count", columnDefinition = "BIGINT DEFAULT 0")
+    private Long viewCount = 0L;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private PostStatus status = PostStatus.DRAFT;
+
+    @Column(name = "published_date")
+    private LocalDateTime publishedDate;
+
+    @Column(name = "meta_description", length = 160)
+    private String metaDescription;
+
+    @Column(name = "meta_keywords", length = 255)
+    private String metaKeywords;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
+    private User author;
+
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "post_tags",
+            joinColumns = @JoinColumn(name = "post_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
+
+    @Column(name = "is_featured", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isFeatured = false;
+
+    @Column(name = "allow_comments", columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean allowComments = true;
+
+    // Helper methods
+    public void addTag(Tag tag) {
+        tags.add(tag);
+        tag.getPosts().add(this);
+    }
+
+    public void removeTag(Tag tag) {
+        tags.remove(tag);
+        tag.getPosts().remove(this);
+    }
+
+    public boolean isPublished() {
+        return PostStatus.PUBLISHED.equals(this.status);
+    }
+
+    public void incrementViewCount() {
+        this.viewCount = (this.viewCount == null ? 0 : this.viewCount) + 1;
+    }
+}
+
+
+----- FILE: Tag.java -----
+package org.prkguides.blog.entity;
+
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true, exclude = {"posts"})
+@ToString(exclude = {"posts"})
+@Entity
+@Table(name = "tags", uniqueConstraints = {@UniqueConstraint(columnNames = {"name"})})
+public class Tag extends BaseEntity{
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", nullable = false, unique = true, length = 50)
+    private String name;
+
+    @Column(name = "slug", nullable = false, unique = true, length = 60)
+    private String slug;
+
+    @Column(name = "description", length = 200)
+    private String description;
+
+    @Column(name = "color", length = 7) // Hex color code
+    private String color;
+
+    @ManyToMany(mappedBy = "tags", fetch = FetchType.LAZY)
+    private Set<Post> posts = new HashSet<>();
+
+    public Tag(String name, String slug) {
+        this.name = name;
+        this.slug = slug;
+    }
+}
+
+
+----- FILE: BaseEntity.java -----
+package org.prkguides.blog.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.MappedSuperclass;
+import lombok.Data;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
+
+@Data
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
+public abstract class BaseEntity {
+
+    @CreatedDate
+    @Column(name="created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Column(name="updated_at", nullable = false, updatable = false)
+    private LocalDateTime updatedAt;
+
+
+}
+
+
+----- FILE: User.java -----
+package org.prkguides.blog.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.prkguides.blog.enums.Role;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true, exclude = {"posts"})
+@ToString(exclude = {"posts"})
+@Entity
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"username"}),
+        @UniqueConstraint(columnNames = {"email"})
+})
+public class User extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "username", nullable = false, unique = true, length = 50)
+    private String username;
+
+    @Column(name = "email", nullable = false, unique = true, length = 100)
+    private String email;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @Column(name = "first_name", length = 50)
+    private String firstName;
+
+    @Column(name = "last_name", length = 50)
+    private String lastName;
+
+    @Column(name = "bio", length = 1000)
+    private String bio;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(name = "website_url")
+    private String websiteUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role = Role.USER;
+
+    @Column(name = "is_active", columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean isActive = true;
+
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Post> posts = new ArrayList<>();
+
+    public String getFullName() {
+        return (firstName != null ? firstName : "") +
+                (lastName != null ? " " + lastName : "").trim();
+    }
+}
+
+
+
+----- FILE: Comment.java -----
+package org.prkguides.blog.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.prkguides.blog.enums.CommentStatus;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true, exclude = {"post", "author", "parentComment", "replies"})
+@ToString(exclude = {"post", "author", "parentComment", "replies"})
+@Entity
+@Table(name = "comments",
+        indexes = {
+                @Index(name = "idx_comment_post", columnList = "post_id"),
+                @Index(name = "idx_comment_author", columnList = "author_id"),
+                @Index(name = "idx_comment_status", columnList = "status"),
+                @Index(name = "idx_comment_parent", columnList = "parent_comment_id")
+        })
+public class Comment extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Lob
+    @Column(name = "content", nullable = false, length = 1000)
+    private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private CommentStatus status = CommentStatus.PENDING;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "post_id", nullable = false)
+    private Post post;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
+    private User author;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_comment_id")
+    private Comment parentComment;
+
+    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Comment> replies = new ArrayList<>();
+
+    // Helper methods
+    public boolean isReply() {
+        return parentComment != null;
+    }
+
+    public boolean isApproved() {
+        return CommentStatus.APPROVED.equals(this.status);
+    }
+
+    public void addReply(Comment reply) {
+        replies.add(reply);
+        reply.setParentComment(this);
+    }
+
+    public void removeReply(Comment reply) {
+        replies.remove(reply);
+        reply.setParentComment(null);
+    }
+}
+
+
+
+===============================
+ PACKAGE: dto
+===============================
+
+----- FILE: CommentReplyDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Comment reply request")
+public class CommentReplyDto {
+
+    @NotBlank(message = "Content is required")
+    @Size(min = 5, max = 1000, message = "Content must be between 5 and 1000 characters")
+    @Schema(description = "Reply content")
+    private String content;
+}
+
+
+----- FILE: CommentUpdateDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Comment update request")
+public class CommentUpdateDto {
+
+    @NotBlank(message = "Content is required")
+    @Size(min = 5, max = 1000, message = "Content must be between 5 and 1000 characters")
+    @Schema(description = "Updated comment content")
+    private String content;
+}
+
+
+----- FILE: PostSummaryDto.java -----
+package org.prkguides.blog.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.prkguides.blog.enums.PostStatus;
+
+import java.time.LocalDateTime;
+import java.util.Set;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Post summary for listings")
+public class PostSummaryDto {
+
+    @Schema(description = "Post ID", example = "1")
+    private Long id;
+
+    @Schema(description = "Post title", example = "Getting Started with Spring Boot")
+    private String title;
+
+    @Schema(description = "URL-friendly slug", example = "getting-started-with-spring-boot")
+    private String slug;
+
+    @Schema(description = "Post excerpt/summary")
+    private String excerpt;
+
+    @Schema(description = "Featured image URL")
+    private String featuredImageUrl;
+
+    @Schema(description = "Estimated reading time in minutes", example = "5")
+    private Integer readingTimeMinutes;
+
+    @Schema(description = "Number of views", example = "1250")
+    private Long viewCount;
+
+    @Schema(description = "Post status", example = "PUBLISHED")
+    private PostStatus status;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Publication date")
+    private LocalDateTime publishedDate;
+
+    @Schema(description = "Post author information")
+    private UserSummaryDto author;
+
+    @Schema(description = "Post tags")
+    private Set<TagDto> tags;
+
+    @Schema(description = "Whether post is featured", example = "true")
+    private Boolean isFeatured;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Creation timestamp")
+    private LocalDateTime createdAt;
+}
+
+
+----- FILE: DashboardStatsDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Map;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Dashboard statistics")
+public class DashboardStatsDto {
+
+    @Schema(description = "Total number of posts", example = "150")
+    private Long totalPosts;
+
+    @Schema(description = "Number of published posts", example = "120")
+    private Long publishedPosts;
+
+    @Schema(description = "Number of draft posts", example = "25")
+    private Long draftPosts;
+
+    @Schema(description = "Number of scheduled posts", example = "5")
+    private Long scheduledPosts;
+
+    @Schema(description = "Total number of users", example = "50")
+    private Long totalUsers;
+
+    @Schema(description = "Number of active users", example = "45")
+    private Long activeUsers;
+
+    @Schema(description = "Total number of tags", example = "30")
+    private Long totalTags;
+
+    @Schema(description = "Total number of comments", example = "500")
+    private Long totalComments;
+
+    @Schema(description = "Number of pending comments", example = "10")
+    private Long pendingComments;
+
+    @Schema(description = "Total views across all posts", example = "50000")
+    private Long totalViews;
+
+    @Schema(description = "Views in the last 30 days", example = "5000")
+    private Long viewsLast30Days;
+
+    @Schema(description = "Recent activity data")
+    private Map<String, Object> recentActivity;
+
+    @Schema(description = "Popular posts data")
+    private Map<String, Object> popularPosts;
+
+    @Schema(description = "Traffic analytics")
+    private Map<String, Object> trafficAnalytics;
+}
+
+
+----- FILE: APIResponse.java -----
+package org.prkguides.blog.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Standard API response wrapper")
+public class APIResponse<T> {
+
+    @Schema(description = "Response status", example = "success")
+    private String status;
+
+    @Schema(description = "Response message", example = "Operation completed successfully")
+    private String message;
+
+    @Schema(description = "Response data")
+    private T data;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Response timestamp")
+    private LocalDateTime timestamp;
+
+    public APIResponse(String status, String message, T data) {
+        this.status = status;
+        this.message = message;
+        this.data = data;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public static <T> APIResponse<T> success(String message, T data) {
+        return new APIResponse<>("success", message, data);
+    }
+
+    public static <T> APIResponse<T> success(T data) {
+        return new APIResponse<>("success", "Operation completed successfully", data);
+    }
+
+    public static <T> APIResponse<T> error(String message) {
+        return new APIResponse<>("error", message, null);
+    }
+}
+
+
+----- FILE: PasswordChangeDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Password change request")
+public class PasswordChangeDto {
+
+    @NotBlank(message = "Current password is required")
+    @Schema(description = "Current password")
+    private String currentPassword;
+
+    @NotBlank(message = "New password is required")
+    @Size(min = 6, max = 100, message = "New password must be between 6 and 100 characters")
+    @Schema(description = "New password")
+    private String newPassword;
+
+    @NotBlank(message = "Confirm password is required")
+    @Schema(description = "Confirm new password")
+    private String confirmPassword;
+}
+
+
+----- FILE: UserRegistrationDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "User registration request")
+public class UserRegistrationDto {
+
+    @NotBlank(message = "Username is required")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    @Schema(description = "Username", example = "johndoe")
+    private String username;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
+    @Schema(description = "Email address", example = "john@example.com")
+    private String email;
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
+    @Schema(description = "Password", example = "password123")
+    private String password;
+
+    @NotBlank(message = "First name is required")
+    @Size(max = 50, message = "First name must not exceed 50 characters")
+    @Schema(description = "First name", example = "John")
+    private String firstName;
+
+    @NotBlank(message = "Last name is required")
+    @Size(max = 50, message = "Last name must not exceed 50 characters")
+    @Schema(description = "Last name", example = "Doe")
+    private String lastName;
+
+    @Size(max = 1000, message = "Bio must not exceed 1000 characters")
+    @Schema(description = "User bio")
+    private String bio;
+
+    @Schema(description = "Website URL")
+    private String websiteUrl;
+}
+
+
+
+----- FILE: UserSummaryDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.prkguides.blog.enums.Role;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "User summary information")
+public class UserSummaryDto {
+
+    @Schema(description = "User ID", example = "1")
+    private Long id;
+
+    @Schema(description = "Username", example = "johndoe")
+    private String username;
+
+    @Schema(description = "First name", example = "John")
+    private String firstName;
+
+    @Schema(description = "Last name", example = "Doe")
+    private String lastName;
+
+    @Schema(description = "Full name", example = "John Doe")
+    private String fullName;
+
+    @Schema(description = "User bio")
+    private String bio;
+
+    @Schema(description = "Avatar image URL")
+    private String avatarUrl;
+
+    @Schema(description = "Website URL")
+    private String websiteUrl;
+
+    @Schema(description = "User role", example = "ADMIN")
+    private Role role;
+}
+
+
+----- FILE: FileUploadResponseDto.java -----
+package org.prkguides.blog.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "File upload response")
+public class FileUploadResponseDto {
+
+    @Schema(description = "Original filename", example = "image.jpg")
+    private String originalFilename;
+
+    @Schema(description = "Stored filename", example = "uuid-image.jpg")
+    private String filename;
+
+    @Schema(description = "File URL", example = "/api/v1/files/images/uuid-image.jpg")
+    private String url;
+
+    @Schema(description = "File size in bytes", example = "1024")
+    private Long size;
+
+    @Schema(description = "File content type", example = "image/jpeg")
+    private String contentType;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Upload timestamp")
+    private LocalDateTime uploadedAt;
+}
+
+
+----- FILE: TagCreateDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Tag creation request")
+public class TagCreateDto {
+
+    @NotBlank(message = "Tag name is required")
+    @Size(min = 2, max = 50, message = "Tag name must be between 2 and 50 characters")
+    @Schema(description = "Tag name", example = "Spring Boot")
+    private String name;
+
+    @Size(max = 200, message = "Description must not exceed 200 characters")
+    @Schema(description = "Tag description")
+    private String description;
+
+    @Pattern(regexp = "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", message = "Color must be a valid hex color")
+    @Schema(description = "Tag color in hex format", example = "#3498db")
+    private String color;
+}
+
+
+----- FILE: UserUpdateDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "User profile update request")
+public class UserUpdateDto {
+
+    @Email(message = "Email should be valid")
+    @Schema(description = "Email address", example = "john@example.com")
+    private String email;
+
+    @Size(max = 50, message = "First name must not exceed 50 characters")
+    @Schema(description = "First name", example = "John")
+    private String firstName;
+
+    @Size(max = 50, message = "Last name must not exceed 50 characters")
+    @Schema(description = "Last name", example = "Doe")
+    private String lastName;
+
+    @Size(max = 1000, message = "Bio must not exceed 1000 characters")
+    @Schema(description = "User bio")
+    private String bio;
+
+    @Schema(description = "Avatar image URL")
+    private String avatarUrl;
+
+    @Schema(description = "Website URL")
+    private String websiteUrl;
+}
+
+
+
+----- FILE: PostDto.java -----
+package org.prkguides.blog.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+import org.prkguides.blog.enums.PostStatus;
+
+import java.time.LocalDateTime;
+import java.util.Set;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Post data transfer object")
+public class PostDto {
+
+    @Schema(description = "Post ID", example = "1")
+    private Long id;
+
+    @NotBlank(message = "Title is required")
+    @Size(min = 5, max = 200, message = "Title must be between 5 and 200 characters")
+    @Schema(description = "Post title", example = "Getting Started with Spring Boot")
+    private String title;
+
+    @Schema(description = "URL-friendly slug", example = "getting-started-with-spring-boot")
+    private String slug;
+
+    @Size(max = 500, message = "Excerpt must not exceed 500 characters")
+    @Schema(description = "Post excerpt/summary", example = "Learn the basics of Spring Boot framework...")
+    private String excerpt;
+
+    @NotBlank(message = "Content is required")
+    @Schema(description = "Post content in HTML format")
+    private String content;
+
+    @Schema(description = "Featured image URL")
+    private String featuredImageUrl;
+
+    @Min(value = 1, message = "Reading time must be at least 1 minute")
+    @Schema(description = "Estimated reading time in minutes", example = "5")
+    private Integer readingTimeMinutes;
+
+    @Schema(description = "Number of views", example = "1250")
+    private Long viewCount;
+
+    @NotNull(message = "Status is required")
+    @Schema(description = "Post status", example = "PUBLISHED")
+    private PostStatus status;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Publication date", example = "2024-01-15T10:30:00")
+    private LocalDateTime publishedDate;
+
+    @Size(max = 160, message = "Meta description must not exceed 160 characters")
+    @Schema(description = "SEO meta description")
+    private String metaDescription;
+
+    @Size(max = 255, message = "Meta keywords must not exceed 255 characters")
+    @Schema(description = "SEO meta keywords")
+    private String metaKeywords;
+
+    @Schema(description = "Post author information")
+    private UserSummaryDto author;
+
+    @Schema(description = "Post tags")
+    private Set<TagDto> tags;
+
+    @Schema(description = "Whether post is featured", example = "true")
+    private Boolean isFeatured;
+
+    @Schema(description = "Whether comments are allowed", example = "true")
+    private Boolean allowComments;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Creation timestamp")
+    private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Last update timestamp")
+    private LocalDateTime updatedAt;
+}
+
+
+----- FILE: TagDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Tag data transfer object")
+public class TagDto {
+
+    @Schema(description = "Tag ID", example = "1")
+    private Long id;
+
+    @NotBlank(message = "Tag name is required")
+    @Size(min = 2, max = 50, message = "Tag name must be between 2 and 50 characters")
+    @Schema(description = "Tag name", example = "Spring Boot")
+    private String name;
+
+    @Schema(description = "URL-friendly slug", example = "spring-boot")
+    private String slug;
+
+    @Size(max = 200, message = "Description must not exceed 200 characters")
+    @Schema(description = "Tag description")
+    private String description;
+
+    @Pattern(regexp = "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", message = "Color must be a valid hex color")
+    @Schema(description = "Tag color in hex format", example = "#3498db")
+    private String color;
+
+    @Schema(description = "Number of posts with this tag", example = "15")
+    private Integer postCount;
+}
+
+
+
+----- FILE: SearchRequestDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.prkguides.blog.enums.PostStatus;
+
+import java.util.Set;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Search request parameters")
+public class SearchRequestDto {
+
+    @Schema(description = "Search query", example = "spring boot tutorial")
+    private String query;
+
+    @Schema(description = "Filter by tags")
+    private Set<String> tags;
+
+    @Schema(description = "Filter by author username")
+    private String author;
+
+    @Schema(description = "Filter by post status", example = "PUBLISHED")
+    private PostStatus status;
+
+    @Schema(description = "Only featured posts", example = "true")
+    private Boolean featuredOnly;
+
+    @Schema(description = "Page number (0-based)", example = "0")
+    private Integer page = 0;
+
+    @Schema(description = "Page size", example = "10")
+    private Integer size = 10;
+
+    @Schema(description = "Sort field", example = "publishedDate")
+    private String sortBy = "publishedDate";
+
+    @Schema(description = "Sort direction", example = "desc")
+    private String sortDirection = "desc";
+}
+
+
+----- FILE: CommentCreateDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Comment creation request")
+public class CommentCreateDto {
+
+    @NotBlank(message = "Content is required")
+    @Size(min = 5, max = 1000, message = "Content must be between 5 and 1000 characters")
+    @Schema(description = "Comment content")
+    private String content;
+
+    @NotNull(message = "Post ID is required")
+    @Schema(description = "Post ID this comment belongs to", example = "1")
+    private Long postId;
+
+    @Schema(description = "Parent comment ID (for replies)", example = "1")
+    private Long parentCommentId;
+}
+
+
+----- FILE: UserDto.java -----
+package org.prkguides.blog.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.prkguides.blog.enums.Role;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Complete user information")
+public class UserDto {
+
+    @Schema(description = "User ID", example = "1")
+    private Long id;
+
+    @Schema(description = "Username", example = "johndoe")
+    private String username;
+
+    @Schema(description = "Email address", example = "john@example.com")
+    private String email;
+
+    @Schema(description = "First name", example = "John")
+    private String firstName;
+
+    @Schema(description = "Last name", example = "Doe")
+    private String lastName;
+
+    @Schema(description = "Full name", example = "John Doe")
+    private String fullName;
+
+    @Schema(description = "User bio")
+    private String bio;
+
+    @Schema(description = "Avatar image URL")
+    private String avatarUrl;
+
+    @Schema(description = "Website URL")
+    private String websiteUrl;
+
+    @Schema(description = "User role", example = "USER")
+    private Role role;
+
+    @Schema(description = "Whether user is active", example = "true")
+    private Boolean isActive;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Creation timestamp")
+    private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Last update timestamp")
+    private LocalDateTime updatedAt;
+
+    @Schema(description = "Number of published posts", example = "5")
+    private Long postCount;
+}
+
+
+----- FILE: LoginRequestDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "User login request")
+public class LoginRequestDto {
+
+    @NotBlank(message = "Username is required")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    @Schema(description = "Username", example = "admin")
+    private String username;
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
+    @Schema(description = "Password", example = "admin123")
+    private String password;
+}
+
+
+----- FILE: PostCreateDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.prkguides.blog.enums.PostStatus;
+
+import java.time.LocalDateTime;
+import java.util.Set;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Post creation request")
+public class PostCreateDto {
+
+    @NotBlank(message = "Title is required")
+    @Size(min = 5, max = 200, message = "Title must be between 5 and 200 characters")
+    @Schema(description = "Post title", example = "Getting Started with Spring Boot")
+    private String title;
+
+    @Size(max = 500, message = "Excerpt must not exceed 500 characters")
+    @Schema(description = "Post excerpt/summary")
+    private String excerpt;
+
+    @NotBlank(message = "Content is required")
+    @Schema(description = "Post content in HTML format")
+    private String content;
+
+    @Schema(description = "Featured image URL")
+    private String featuredImageUrl;
+
+    @Min(value = 1, message = "Reading time must be at least 1 minute")
+    @Schema(description = "Estimated reading time in minutes", example = "5")
+    private Integer readingTimeMinutes;
+
+    @NotNull(message = "Status is required")
+    @Schema(description = "Post status", example = "PUBLISHED")
+    private PostStatus status;
+
+    @Schema(description = "Publication date (for scheduled posts)")
+    private LocalDateTime publishedDate;
+
+    @Size(max = 160, message = "Meta description must not exceed 160 characters")
+    @Schema(description = "SEO meta description")
+    private String metaDescription;
+
+    @Size(max = 255, message = "Meta keywords must not exceed 255 characters")
+    @Schema(description = "SEO meta keywords")
+    private String metaKeywords;
+
+    @Schema(description = "Tag names to associate with the post")
+    private Set<String> tagNames;
+
+    @Schema(description = "Whether post is featured", example = "false")
+    private Boolean isFeatured = false;
+
+    @Schema(description = "Whether comments are allowed", example = "true")
+    private Boolean allowComments = true;
+}
+
+
+
+----- FILE: JwtResponseDto.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "JWT authentication response")
+public class JwtResponseDto {
+
+    @Schema(description = "JWT token")
+    private String token;
+
+    @Schema(description = "Token type", example = "Bearer")
+    private String type;
+
+    @Schema(description = "Authenticated user information")
+    private UserSummaryDto user;
+}
+
+
+
+----- FILE: PaginationResponse.java -----
+package org.prkguides.blog.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Paginated response wrapper")
+public class PaginationResponse<T> {
+
+    @Schema(description = "Page content")
+    private List<T> content;
+
+    @Schema(description = "Current page number (0-based)", example = "0")
+    private Integer page;
+
+    @Schema(description = "Page size", example = "10")
+    private Integer size;
+
+    @Schema(description = "Total number of elements", example = "150")
+    private Long totalElements;
+
+    @Schema(description = "Total number of pages", example = "15")
+    private Integer totalPages;
+
+    @Schema(description = "Whether this is the last page", example = "false")
+    private Boolean last;
+
+    @Schema(description = "Whether this is the first page", example = "true")
+    private Boolean first;
+
+    @Schema(description = "Whether the page is empty", example = "false")
+    private Boolean empty;
+}
+
+
+----- FILE: CommentDto.java -----
+package org.prkguides.blog.dto;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.prkguides.blog.enums.CommentStatus;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Schema(description = "Comment information")
+public class CommentDto {
+
+    @Schema(description = "Comment ID", example = "1")
+    private Long id;
+
+    @Schema(description = "Comment content")
+    private String content;
+
+    @Schema(description = "Comment status", example = "APPROVED")
+    private CommentStatus status;
+
+    @Schema(description = "Post ID this comment belongs to", example = "1")
+    private Long postId;
+
+    @Schema(description = "Parent comment ID (for replies)", example = "1")
+    private Long parentCommentId;
+
+    @Schema(description = "Comment author information")
+    private UserSummaryDto author;
+
+    @Schema(description = "Replies to this comment")
+    private List<CommentDto> replies;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Creation timestamp")
+    private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @Schema(description = "Last update timestamp")
+    private LocalDateTime updatedAt;
+}
+
+

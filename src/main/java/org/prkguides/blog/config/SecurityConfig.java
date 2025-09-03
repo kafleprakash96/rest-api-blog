@@ -85,6 +85,9 @@ public class SecurityConfig {
                         // Debug endpoints (remove in production)
                         .requestMatchers("/api/v1/debug/**").permitAll()
 
+                        // Allow any authenticated user to create posts
+                        .requestMatchers(HttpMethod.POST, "/api/v1/posts/create").authenticated()
+
                         // Admin-only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/v1/posts/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/posts/**").hasRole("ADMIN")

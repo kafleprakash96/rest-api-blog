@@ -39,13 +39,12 @@ public class PostController {
             @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required")
     })
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<APIResponse<PostDto>> createPost(
             @Valid @RequestBody PostCreateDto postCreateDto,
             Authentication authentication) {
 
-        log.info("Creating new post: {}", postCreateDto.getTitle());
+        log.info("Creating new post: {} by user: {}", postCreateDto.getTitle(), authentication.getName());
         PostDto createdPost = postService.createPost(postCreateDto, authentication.getName());
 
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -53,6 +52,8 @@ public class PostController {
     }
 
     @Operation(summary = "Get all posts with pagination", description = "Retrieves all posts with pagination support")
+    @SecurityRequirement(name="bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getAllPosts(
             @Parameter(description = "Page number (0-based)")
@@ -68,6 +69,18 @@ public class PostController {
         }
 
         return ResponseEntity.ok(APIResponse.success("Posts retrieved successfully", posts));
+    }
+
+    @Operation(summary = "Get my posts", description = "Get posts created by the authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/my-posts")
+    public ResponseEntity<APIResponse<PaginationResponse<PostSummaryDto>>> getMyPosts(
+            @RequestParam(value = "pageNo", defaultValue = "0") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            Authentication authentication) {
+
+        PaginationResponse<PostSummaryDto> posts = postService.getPostsByAuthor(authentication.getName(), pageNo, pageSize);
+        return ResponseEntity.ok(APIResponse.success("My posts retrieved successfully", posts));
     }
 
     @Operation(summary = "Get published posts", description = "Retrieves only published posts with pagination")
@@ -134,9 +147,8 @@ public class PostController {
         return ResponseEntity.ok(APIResponse.success("Post updated successfully", updatedPost));
     }
 
-    @Operation(summary = "Delete a blog post", description = "Deletes a blog post. Requires admin privileges.")
+    @Operation(summary = "Delete a blog post", description = "Deletes a blog post.Authors can delete their own posts, admins can delete any post.")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<APIResponse<String>> deletePost(@PathVariable Long id) {
 
